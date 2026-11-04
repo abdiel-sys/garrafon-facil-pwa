@@ -1,76 +1,139 @@
+'use client';
+
+import { useState } from 'react';
+import Link from 'next/link';
+import OrderHeader from '@/components/customer/OrderHeader';
+import OrderQuantityCounter from '@/components/customer/OrderQuantityCounter';
+import AddressOptionCard from '@/components/customer/AddressOptionCard';
+import DeliveryAddressForm from '@/components/customer/DeliveryAddressForm';
+import OrderSummary from '@/components/customer/OrderSummary';
+
 export default function OrderPage() {
+  const [quantity, setQuantity] = useState(2);
+  const unitPrice = 40;
+
+  // List of saved addresses managed in page.js
+  const [savedAddresses] = useState([
+    {
+      id: 1,
+      alias: 'Mi Casa',
+      street: 'Calle Mina #402',
+      colonia: 'Col. Centro',
+      cp: '86000',
+      reference: 'Portón color gris, fachada azul',
+      isDefault: true,
+    },
+    {
+      id: 2,
+      alias: 'Oficina / Trabajo',
+      street: 'Av. Universidad #105',
+      colonia: 'Col. Magisterial',
+      cp: '86040',
+      reference: 'Recepción en planta baja',
+      isDefault: false,
+    },
+  ]);
+
+  const [selectedAddressId, setSelectedAddressId] = useState(1);
+  const [isCustomAddress, setIsCustomAddress] = useState(false);
+  const [newAddressForm, setNewAddressForm] = useState({
+    street: '',
+    colonia: '',
+    cp: '',
+    reference: '',
+  });
+
+  const handleIncrement = () => setQuantity((prev) => prev + 1);
+  const handleDecrement = () => setQuantity((prev) => (prev > 1 ? prev - 1 : 1));
+
+  const handleSelectSaved = (id) => {
+    setSelectedAddressId(id);
+    setIsCustomAddress(false);
+  };
+
+  const handleSelectNew = () => {
+    setIsCustomAddress(true);
+  };
+
+  const handleNewAddressChange = (name, value) => {
+    setNewAddressForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleConfirmOrder = () => {
+    const chosenAddress = isCustomAddress
+      ? `${newAddressForm.street || 'Nueva dirección'}, ${newAddressForm.colonia}`
+      : savedAddresses.find((a) => a.id === selectedAddressId)?.street;
+
+    alert(`¡Pedido confirmado! ${quantity} garrafón(es) para entregar en: ${chosenAddress}`);
+  };
+
+  const totalPrice = quantity * unitPrice;
+
   return (
     <div className="space-y-6">
-      <header className="text-center py-2">
-        <h1 className="text-xl font-bold text-slate-900">Purificadora de Agua</h1>
-        <p className="text-sm text-slate-500">Pide tu garrafón de 20L a domicilio</p>
-      </header>
+      <OrderHeader />
 
       {/* Quantity Counter Card */}
-      <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between">
-        <div>
-          <h2 className="font-semibold text-slate-800">Garrafón 20L</h2>
-          <p className="text-sm text-sky-600 font-bold">$40.00 MXN / c/u</p>
-        </div>
-        <div className="flex items-center gap-3 bg-slate-100 px-3 py-1.5 rounded-xl">
-          <button className="w-8 h-8 rounded-lg bg-white text-slate-700 font-bold shadow-sm">-</button>
-          <span className="font-bold text-slate-800">2</span>
-          <button className="w-8 h-8 rounded-lg bg-sky-600 text-white font-bold shadow-sm">+</button>
-        </div>
-      </div>
+      <OrderQuantityCounter
+        quantity={quantity}
+        onIncrement={handleIncrement}
+        onDecrement={handleDecrement}
+        pricePerUnit={unitPrice}
+      />
 
-      {/* Delivery Address Form */}
+      {/* Delivery Address Selection & Form */}
       <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 space-y-4">
-        <h2 className="font-semibold text-slate-800 border-b pb-2">Dirección de Entrega</h2>
-
-        <div>
-          <label className="block text-xs font-medium text-slate-600 mb-1">Calle y Número</label>
-          <input
-            type="text"
-            placeholder="Ej. Av. Hidalgo #123"
-            className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-sky-500"
-          />
+        <div className="flex justify-between items-center border-b pb-2">
+          <h2 className="font-semibold text-slate-800">Dirección de Entrega</h2>
+          <Link
+            href="/customer/addresses"
+            className="text-xs text-sky-600 font-semibold hover:underline"
+          >
+            Administrar
+          </Link>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">Colonia</label>
-            <input
-              type="text"
-              placeholder="Ej. Centro"
-              className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-sky-500"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">Código Postal</label>
-            <input
-              type="text"
-              placeholder="86000"
-              className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-sky-500"
-            />
+        {/* Saved Addresses List Option */}
+        <div className="space-y-2">
+          <p className="text-xs font-medium text-slate-500">Selecciona una dirección guardada:</p>
+          <div className="space-y-2">
+            {savedAddresses.map((address) => (
+              <AddressOptionCard
+                key={address.id}
+                address={address}
+                isSelected={!isCustomAddress && selectedAddressId === address.id}
+                onSelect={() => handleSelectSaved(address.id)}
+              />
+            ))}
           </div>
         </div>
 
-        <div>
-          <label className="block text-xs font-medium text-slate-600 mb-1">Referencias de la casa</label>
-          <textarea
-            rows={2}
-            placeholder="Ej. Portón color blanco, frente a la tiendita..."
-            className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-sky-500"
-          />
+        {/* Option to use a new address */}
+        <div className="pt-1">
+          <button
+            type="button"
+            onClick={handleSelectNew}
+            className={`w-full p-3 rounded-xl border text-left text-xs font-semibold transition flex items-center justify-between ${
+              isCustomAddress
+                ? 'border-sky-500 bg-sky-50/50 text-sky-700'
+                : 'border-dashed border-slate-300 text-slate-600 hover:border-slate-400 bg-slate-50/50'
+            }`}
+          >
+            <span>+ Entregar en otra dirección</span>
+            <span className="text-base">{isCustomAddress ? '✓' : ''}</span>
+          </button>
+
+          {isCustomAddress && (
+            <DeliveryAddressForm
+              formData={newAddressForm}
+              onChange={handleNewAddressChange}
+            />
+          )}
         </div>
       </div>
 
       {/* Order Summary & Submit Button */}
-      <div className="space-y-3">
-        <div className="flex justify-between items-center px-2 text-slate-700 font-medium">
-          <span>Total a pagar:</span>
-          <span className="text-xl font-extrabold text-slate-900">$80.00 MXN</span>
-        </div>
-        <button className="w-full py-3.5 bg-sky-600 hover:bg-sky-700 text-white font-bold rounded-xl shadow-md transition">
-          Confirmar Pedido
-        </button>
-      </div>
+      <OrderSummary total={totalPrice} onConfirm={handleConfirmOrder} />
     </div>
   );
 }
