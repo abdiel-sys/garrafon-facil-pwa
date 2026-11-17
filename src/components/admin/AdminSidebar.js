@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import LogoutButton from '@/components/auth/LogoutButton';
 
 export default function AdminSidebar() {
   const pathname = usePathname();
@@ -29,7 +30,10 @@ export default function AdminSidebar() {
           </Link>
         </nav>
       </div>
+
+      <div className="pt-4 border-t border-slate-800">
+        <LogoutButton variant="sidebar" />
+      </div>
     </aside>
   );
 }
-

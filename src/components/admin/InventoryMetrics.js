@@ -1,16 +1,15 @@
-export default function InventoryMetrics() {
+export default function InventoryMetrics({ fullBottles = 145, emptyBottles = 32 }) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
       {/* Metric Cards */}
       <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
         <span className="text-xs font-semibold text-slate-400 uppercase">Garrafones Llenos</span>
-        <p className="text-3xl font-extrabold text-slate-900 mt-1">145</p>
+        <p className="text-3xl font-extrabold text-slate-900 mt-1">{fullBottles}</p>
       </div>
       <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
         <span className="text-xs font-semibold text-slate-400 uppercase">Envases Vacíos</span>
-        <p className="text-3xl font-extrabold text-slate-900 mt-1">32</p>
+        <p className="text-3xl font-extrabold text-slate-900 mt-1">{emptyBottles}</p>
       </div>
     </div>
   );
 }
-

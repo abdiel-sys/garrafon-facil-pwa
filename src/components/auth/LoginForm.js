@@ -1,19 +1,41 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 
-export default function LoginForm() {
+export default function LoginForm({ onLogin, onGuestLogin, isLoading = false, errorMessage = '' }) {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (onLogin) {
+      onLogin({ email, password });
+    }
+  };
+
   return (
     <div className="mt-8 bg-white py-8 px-4 shadow-sm border border-slate-200 rounded-2xl sm:px-10">
-      <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
+      {errorMessage && (
+        <div className="mb-5 p-3.5 bg-rose-50 border border-rose-300 text-rose-800 text-xs rounded-xl flex items-start gap-2.5">
+          <span className="text-base leading-none">⚠️</span>
+          <div className="flex-1 font-semibold leading-relaxed">
+            {errorMessage}
+          </div>
+        </div>
+      )}
+
+      <form className="space-y-4" onSubmit={handleSubmit}>
         <div>
           <label className="block text-xs font-medium text-slate-700 mb-1">
-            Correo electrónico o Teléfono
+            Correo electrónico
           </label>
           <input
-            type="text"
+            type="email"
             required
-            placeholder="Ej. 9931234567 o tu correo"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="tu-correo@ejemplo.com"
             className="w-full px-3 py-2.5 text-sm border border-slate-200 rounded-xl focus:outline-none focus:border-sky-500"
           />
         </div>
@@ -30,6 +52,8 @@ export default function LoginForm() {
           <input
             type="password"
             required
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
             placeholder="••••••••"
             className="w-full px-3 py-2.5 text-sm border border-slate-200 rounded-xl focus:outline-none focus:border-sky-500"
           />
@@ -37,9 +61,10 @@ export default function LoginForm() {
 
         <button
           type="submit"
-          className="w-full py-3 bg-sky-600 hover:bg-sky-700 text-white font-bold rounded-xl shadow-md transition text-sm mt-2"
+          disabled={isLoading}
+          className="w-full py-3 bg-sky-600 hover:bg-sky-700 text-white font-bold rounded-xl shadow-md transition text-sm mt-2 disabled:opacity-50"
         >
-          Iniciar Sesión
+          {isLoading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
         </button>
       </form>
 
@@ -56,6 +81,7 @@ export default function LoginForm() {
       {/* Guest or Quick Action */}
       <button
         type="button"
+        onClick={onGuestLogin}
         className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl transition text-xs"
       >
         Continuar como Invitado
@@ -64,11 +90,10 @@ export default function LoginForm() {
       {/* Register Link */}
       <div className="mt-6 text-center text-xs text-slate-500">
         ¿No tienes una cuenta?{' '}
-        <Link href="/register" className="text-sky-600 font-bold hover:underline">
+        <Link href="/auth/register" className="text-sky-600 font-bold hover:underline">
           Regístrate aquí
         </Link>
       </div>
     </div>
   );
 }
-

@@ -1,47 +1,55 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import OrderHeader from '@/components/customer/OrderHeader';
 import OrderQuantityCounter from '@/components/customer/OrderQuantityCounter';
 import AddressOptionCard from '@/components/customer/AddressOptionCard';
 import DeliveryAddressForm from '@/components/customer/DeliveryAddressForm';
 import OrderSummary from '@/components/customer/OrderSummary';
+import { getCustomerAddresses } from '@/actions/addresses';
+import { createOrder } from '@/actions/orders';
 
 export default function OrderPage() {
+  const router = useRouter();
   const [quantity, setQuantity] = useState(2);
   const unitPrice = 40;
 
-  // List of saved addresses managed in page.js
-  const [savedAddresses] = useState([
-    {
-      id: 1,
-      alias: 'Mi Casa',
-      street: 'Calle Mina #402',
-      colonia: 'Col. Centro',
-      cp: '86000',
-      reference: 'Portón color gris, fachada azul',
-      isDefault: true,
-    },
-    {
-      id: 2,
-      alias: 'Oficina / Trabajo',
-      street: 'Av. Universidad #105',
-      colonia: 'Col. Magisterial',
-      cp: '86040',
-      reference: 'Recepción en planta baja',
-      isDefault: false,
-    },
-  ]);
-
-  const [selectedAddressId, setSelectedAddressId] = useState(1);
+  const [savedAddresses, setSavedAddresses] = useState([]);
+  const [selectedAddressId, setSelectedAddressId] = useState(null);
   const [isCustomAddress, setIsCustomAddress] = useState(false);
+  const [isLoadingAddresses, setIsLoadingAddresses] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [statusMessage, setStatusMessage] = useState({ type: '', text: '' });
+
   const [newAddressForm, setNewAddressForm] = useState({
     street: '',
     colonia: '',
     cp: '',
     reference: '',
   });
+
+  useEffect(() => {
+    let ignore = false;
+    getCustomerAddresses().then((res) => {
+      if (!ignore) {
+        setIsLoadingAddresses(false);
+        if (res?.data && res.data.length > 0) {
+          setSavedAddresses(res.data);
+          const defaultAddr = res.data.find((a) => a.is_default) || res.data[0];
+          setSelectedAddressId(defaultAddr.id);
+          setIsCustomAddress(false);
+        } else {
+          setSavedAddresses([]);
+          setIsCustomAddress(true);
+        }
+      }
+    });
+    return () => {
+      ignore = true;
+    };
+  }, []);
 
   const handleIncrement = () => setQuantity((prev) => prev + 1);
   const handleDecrement = () => setQuantity((prev) => (prev > 1 ? prev - 1 : 1));
@@ -59,12 +67,33 @@ export default function OrderPage() {
     setNewAddressForm((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleConfirmOrder = () => {
-    const chosenAddress = isCustomAddress
-      ? `${newAddressForm.street || 'Nueva dirección'}, ${newAddressForm.colonia}`
-      : savedAddresses.find((a) => a.id === selectedAddressId)?.street;
+  const handleConfirmOrder = async () => {
+    setIsSubmitting(true);
+    setStatusMessage({ type: '', text: '' });
 
-    alert(`¡Pedido confirmado! ${quantity} garrafón(es) para entregar en: ${chosenAddress}`);
+    const payload = {
+      quantity,
+      addressId: isCustomAddress ? null : selectedAddressId,
+      customAddress: isCustomAddress ? newAddressForm : null,
+      reference: isCustomAddress ? newAddressForm.reference : '',
+    };
+
+    const res = await createOrder(payload);
+
+    if (res?.error) {
+      setStatusMessage({ type: 'error', text: res.error });
+      setIsSubmitting(false);
+      return;
+    }
+
+    setStatusMessage({
+      type: 'success',
+      text: '¡Pedido registrado con éxito! Redirigiendo a tus pedidos...',
+    });
+
+    setTimeout(() => {
+      router.push('/customer/history');
+    }, 1200);
   };
 
   const totalPrice = quantity * unitPrice;
@@ -72,6 +101,18 @@ export default function OrderPage() {
   return (
     <div className="space-y-6">
       <OrderHeader />
+
+      {statusMessage.text && (
+        <div
+          className={`p-3.5 rounded-xl text-xs font-semibold ${
+            statusMessage.type === 'error'
+              ? 'bg-rose-50 border border-rose-300 text-rose-800'
+              : 'bg-emerald-50 border border-emerald-300 text-emerald-800'
+          }`}
+        >
+          {statusMessage.text}
+        </div>
+      )}
 
       {/* Quantity Counter Card */}
       <OrderQuantityCounter
@@ -93,47 +134,67 @@ export default function OrderPage() {
           </Link>
         </div>
 
-        {/* Saved Addresses List Option */}
-        <div className="space-y-2">
-          <p className="text-xs font-medium text-slate-500">Selecciona una dirección guardada:</p>
-          <div className="space-y-2">
-            {savedAddresses.map((address) => (
-              <AddressOptionCard
-                key={address.id}
-                address={address}
-                isSelected={!isCustomAddress && selectedAddressId === address.id}
-                onSelect={() => handleSelectSaved(address.id)}
-              />
-            ))}
-          </div>
-        </div>
+        {isLoadingAddresses ? (
+          <p className="text-xs text-slate-400 py-3 text-center">Cargando direcciones...</p>
+        ) : savedAddresses.length > 0 ? (
+          <>
+            {/* Saved Addresses List Option */}
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-slate-500">Selecciona una dirección guardada:</p>
+              <div className="space-y-2">
+                {savedAddresses.map((address) => (
+                  <AddressOptionCard
+                    key={address.id}
+                    address={address}
+                    isSelected={!isCustomAddress && selectedAddressId === address.id}
+                    onSelect={() => handleSelectSaved(address.id)}
+                  />
+                ))}
+              </div>
+            </div>
 
-        {/* Option to use a new address */}
-        <div className="pt-1">
-          <button
-            type="button"
-            onClick={handleSelectNew}
-            className={`w-full p-3 rounded-xl border text-left text-xs font-semibold transition flex items-center justify-between ${
-              isCustomAddress
-                ? 'border-sky-500 bg-sky-50/50 text-sky-700'
-                : 'border-dashed border-slate-300 text-slate-600 hover:border-slate-400 bg-slate-50/50'
-            }`}
-          >
-            <span>+ Entregar en otra dirección</span>
-            <span className="text-base">{isCustomAddress ? '✓' : ''}</span>
-          </button>
+            {/* Option to use a new address */}
+            <div className="pt-1">
+              <button
+                type="button"
+                onClick={handleSelectNew}
+                className={`w-full p-3 rounded-xl border text-left text-xs font-semibold transition flex items-center justify-between ${
+                  isCustomAddress
+                    ? 'border-sky-500 bg-sky-50/50 text-sky-700'
+                    : 'border-dashed border-slate-300 text-slate-600 hover:border-slate-400 bg-slate-50/50'
+                }`}
+              >
+                <span>+ Entregar en otra dirección</span>
+                <span className="text-base">{isCustomAddress ? '✓' : ''}</span>
+              </button>
 
-          {isCustomAddress && (
+              {isCustomAddress && (
+                <DeliveryAddressForm
+                  formData={newAddressForm}
+                  onChange={handleNewAddressChange}
+                />
+              )}
+            </div>
+          </>
+        ) : (
+          <div className="space-y-3">
+            <p className="text-xs text-slate-600">
+              No tienes direcciones guardadas. Ingresa tu dirección de entrega:
+            </p>
             <DeliveryAddressForm
               formData={newAddressForm}
               onChange={handleNewAddressChange}
             />
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       {/* Order Summary & Submit Button */}
-      <OrderSummary total={totalPrice} onConfirm={handleConfirmOrder} />
+      <OrderSummary
+        total={totalPrice}
+        onConfirm={handleConfirmOrder}
+        disabled={isSubmitting}
+      />
     </div>
   );
 }
